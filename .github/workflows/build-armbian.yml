@@ -17,6 +17,8 @@ on:
         options:
           - jammy
           - bullseye
+          - lunar
+          - bookworm
       armbian_fstype:
         description: "Select armbian rootfs type."
         required: false
@@ -102,6 +104,7 @@ on:
           - s905x3-q1000
           - s905x3-a100
           - s905x3-2101
+          - s905x3-whale
           - s905x3-b
           - s905
           - s905-mxqpro-plus
@@ -125,6 +128,7 @@ on:
           - smart-am40
           - sw799
           - zysj
+          - mpc1903
           - beikeyun
           - l1pro
           - station-m1
@@ -163,14 +167,15 @@ on:
           - stable
           - flippy
           - dev
+          - beta
       armbian_storage:
-        description: "Select Armbian image storage time."
+        description: "Select image storage type."
         required: false
-        default: "lts"
+        default: "save"
         type: choice
         options:
-          - lts
-          - tmp
+          - save
+          - temp
 
 env:
   TZ: America/New_York
