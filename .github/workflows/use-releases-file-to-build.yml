@@ -177,7 +177,7 @@ on:
       armbian_kernel:
         description: "Select kernel version."
         required: false
-        default: "6.1.y_6.6.y"
+        default: "6.1.y_6.12.y"
         type: choice
         options:
           - 5.4.y
@@ -185,8 +185,12 @@ on:
           - 5.15.y
           - 6.1.y
           - 6.6.y
+          - 6.12.y
+          - 5.4.y_5.10.y
+          - 5.15.y_6.1.y
+          - 6.1.y_6.12.y
           - 6.1.y_6.6.y
-          - 5.15.y_5.10.y
+          - 6.6.y_6.12.y
       auto_kernel:
         description: "Auto use the latest kernel."
         required: false
@@ -259,7 +263,7 @@ jobs:
           sudo rm -f /swapfile /mnt/swapfile
           sudo -E apt-get -y update
           sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-          sudo -E apt-get -y install $(curl -fsSL https://is.gd/depend_ubuntu2204_armbian)
+          sudo -E apt-get -y install $(curl -fsSL https://tinyurl.com/ubuntu2204-build-armbian)
           sudo -E systemctl daemon-reload
           #sudo -E apt-get -y full-upgrade
           sudo -E apt-get -y autoremove --purge
@@ -297,19 +301,20 @@ jobs:
           ln -sf /builder/build ${GITHUB_WORKSPACE}/build
           ln -sf /builder/build /home/runner/work/_actions/ophub/amlogic-s9xxx-armbian/main/build
 
-          latest_version="$(curl -s \
-                              -H "Accept: application/vnd.github+json" \
-                              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                              https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100 |
-                              jq '.[]' |
-                              jq -s --arg RTK "Armbian_${{ inputs.set_release }}_" '.[] | select(.tag_name | contains($RTK))' |
-                              jq -s '.[].assets[] | {data:.updated_at, url:.browser_download_url}' |
-                              jq -s --arg BOARD "-trunk_" '.[] | select((.url | contains($BOARD)) and (.url | endswith(".img.gz")))' |
-                              jq -s 'sort_by(.data)|reverse[]' |
-                              jq -s '.[0]' -c
-                          )"
+          latest_version=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100 | \
+                jq -r --arg RTK "Armbian_${{ inputs.set_release }}_" \
+                --arg BOARD "-trunk_" \
+                '[.[] | select(.tag_name | contains($RTK))] |
+                map(.assets[] | select(.browser_download_url | contains($BOARD) and endswith(".img.gz"))) |
+                sort_by(.updated_at) |
+                reverse |
+                .[0] |
+                {data: .updated_at, url: .browser_download_url}')
 
-          [[ "${latest_version}" == "null" ]] && echo "Invalid Armbian image download address." && exit 1
+          [[ -z "${latest_version}" || "${latest_version}" == "null" ]] && echo "Invalid Armbian image download address." && exit 1
           latest_updated_at="$(echo ${latest_version} | jq -r '.data')"
           latest_url="$(echo ${latest_version} | jq -r '.url')"
 
